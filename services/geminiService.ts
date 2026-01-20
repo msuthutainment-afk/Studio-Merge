@@ -43,10 +43,19 @@ export const generateImageMetadata = async (base64Image: string): Promise<Genera
 export const artisticMergeImages = async (
   bgBase64: string, 
   subjectBase64: string, 
-  isBlurEnabled: boolean = false
+  isBlurEnabled: boolean = false,
+  subjectSide: 'left' | 'right' = 'left',
+  subjectZoom: number = 50
 ): Promise<string> => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
+  // Calculate zoom description: 0 is small, 100 is very large/zoomed in
+  const zoomDescription = subjectZoom > 70 
+    ? "extremely large and dominant, zoomed in to show detail" 
+    : subjectZoom > 30 
+      ? "prominent and standard foreground size" 
+      : "subtle and integrated into the scene";
+
   const effectsPrompt = `
     - BACKGROUND MODIFICATION (SCENE 01): 
       ${isBlurEnabled ? "Apply a fixed 10% blur (subtle professional depth of field) to the background image only." : "Keep the background image perfectly sharp."}
@@ -54,7 +63,8 @@ export const artisticMergeImages = async (
     - SUBJECT INTEGRATION (PHOTO 02): 
       Strictly remove the background from the second image. 
       IMPORTANT: DO NOT change, edit, or filter the look of this second photo. It must remain exactly as uploaded but without its original background.
-      Place it as a large foreground element on the left.
+      Place it on the ${subjectSide.toUpperCase()} side of the composition.
+      Scale: The subject should be ${zoomDescription}.
   `;
 
   const response = await ai.models.generateContent({

@@ -13,10 +13,9 @@ export interface BrandingConfig {
   brightness: number;
   contrast: number;
   saturation: number;
-  split: number; 
-  softness: number; 
-  angle: number; 
-  isBlurEnabled: boolean; // Replaced intensity with a toggle
+  isBlurEnabled: boolean;
+  subjectSide: 'left' | 'right';
+  subjectZoom: number; // 0 to 100 scale for subject prominence
 }
 
 export interface GeneratedMetadata {

@@ -12,16 +12,15 @@ const App: React.FC = () => {
   const [isMerging, setIsMerging] = useState(false);
   const [metadata, setMetadata] = useState<GeneratedMetadata | null>(null);
   const [config, setConfig] = useState<BrandingConfig>({
-    logoSize: 8,
-    padding: 15, // Absolute lower bottom
+    logoSize: 24, // Increased 3x from previous 8
+    padding: 25,
     circleOpacity: 1,
     brightness: 100,
     contrast: 100,
     saturation: 100,
-    split: 50,
-    softness: 40,
-    angle: 0,
-    isBlurEnabled: false
+    isBlurEnabled: false,
+    subjectSide: 'left',
+    subjectZoom: 50
   });
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -57,7 +56,9 @@ const App: React.FC = () => {
       const result = await artisticMergeImages(
         bgImage.src, 
         subjectImage.src, 
-        config.isBlurEnabled
+        config.isBlurEnabled,
+        config.subjectSide,
+        config.subjectZoom
       );
       setAiResult(result);
     } catch (error) {
@@ -104,6 +105,20 @@ const App: React.FC = () => {
 
           ctx.save();
           ctx.globalAlpha = config.circleOpacity;
+
+          // Create a soft "round" dark shadow underneath the logo
+          const shadowRadius = Math.max(logoW, logoH) * 0.75;
+          const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, shadowRadius);
+          gradient.addColorStop(0, 'rgba(0, 0, 0, 0.5)'); // Core shadow
+          gradient.addColorStop(0.5, 'rgba(0, 0, 0, 0.2)'); // Mid fade
+          gradient.addColorStop(1, 'rgba(0, 0, 0, 0)'); // Full transparent edge
+          
+          ctx.fillStyle = gradient;
+          ctx.beginPath();
+          ctx.arc(centerX, centerY, shadowRadius, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Draw the actual logo on top of the shadow
           ctx.drawImage(logoImg, drawX, drawY, logoW, logoH);
           ctx.restore();
         };
@@ -146,7 +161,7 @@ const App: React.FC = () => {
           ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
           ctx.font = 'bold 32px sans-serif';
           ctx.textAlign = 'center';
-          ctx.fillText('Ready for Artistic AI Merge', targetWidth/2, targetHeight/2);
+          ctx.fillText(`Aligning to ${config.subjectSide.toUpperCase()} with ${config.subjectZoom}% Zoom`, targetWidth/2, targetHeight/2);
         }
         
         finalizeWithLogo();
@@ -274,7 +289,6 @@ const App: React.FC = () => {
                   <input type="file" className="hidden" accept="image/*" onChange={(e) => handleFileChange(e, 'bg')} />
                 </label>
                 
-                {/* Fixed 10% Blur Toggle specifically for Scene Photo */}
                 <div className="mt-4 flex items-center justify-between bg-gray-900/40 p-3 rounded-xl border border-gray-800/50">
                   <div className="flex flex-col">
                     <span className="text-[10px] font-bold uppercase text-gray-400">Scene Blur (10%)</span>
@@ -289,14 +303,46 @@ const App: React.FC = () => {
                 </div>
               </div>
 
-              <label className={`block relative h-28 rounded-2xl border-2 border-dashed transition-all cursor-pointer overflow-hidden ${subjectImage ? 'border-indigo-500 bg-indigo-500/5' : 'border-gray-800 hover:border-gray-600'}`}>
-                {subjectImage ? <img src={subjectImage.src} className="absolute inset-0 w-full h-full object-cover opacity-30" /> : null}
-                <div className="absolute inset-0 flex flex-col items-center justify-center p-4">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-white">02. Unedited Subject</span>
-                  <p className="text-[9px] text-gray-500 mt-1 uppercase truncate max-w-full px-4">{subjectImage ? subjectImage.file?.name : 'Remove BG only'}</p>
+              <div className="space-y-3">
+                <label className={`block relative h-28 rounded-2xl border-2 border-dashed transition-all cursor-pointer overflow-hidden ${subjectImage ? 'border-indigo-500 bg-indigo-500/5' : 'border-gray-800 hover:border-gray-600'}`}>
+                  {subjectImage ? <img src={subjectImage.src} className="absolute inset-0 w-full h-full object-cover opacity-30" /> : null}
+                  <div className="absolute inset-0 flex flex-col items-center justify-center p-4">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-white">02. Unedited Subject</span>
+                    <p className="text-[9px] text-gray-500 mt-1 uppercase truncate max-w-full px-4">{subjectImage ? subjectImage.file?.name : 'Remove BG only'}</p>
+                  </div>
+                  <input type="file" className="hidden" accept="image/*" onChange={(e) => handleFileChange(e, 'subject')} />
+                </label>
+
+                <div className="flex bg-gray-900/40 rounded-xl p-1 border border-gray-800/50">
+                  <button 
+                    onClick={() => setConfig({...config, subjectSide: 'left'})}
+                    className={`flex-1 py-2 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all ${config.subjectSide === 'left' ? 'bg-indigo-600 text-white shadow-lg' : 'text-gray-500 hover:text-gray-300'}`}
+                  >
+                    Align Left
+                  </button>
+                  <button 
+                    onClick={() => setConfig({...config, subjectSide: 'right'})}
+                    className={`flex-1 py-2 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all ${config.subjectSide === 'right' ? 'bg-indigo-600 text-white shadow-lg' : 'text-gray-500 hover:text-gray-300'}`}
+                  >
+                    Align Right
+                  </button>
                 </div>
-                <input type="file" className="hidden" accept="image/*" onChange={(e) => handleFileChange(e, 'subject')} />
-              </label>
+
+                <div className="bg-gray-900/40 p-3 rounded-xl border border-gray-800/50">
+                  <div className="flex justify-between text-[10px] font-black uppercase mb-2 text-gray-500">
+                    <span>Subject Zoom</span>
+                    <span className="text-indigo-400">{config.subjectZoom}%</span>
+                  </div>
+                  <input 
+                    type="range" 
+                    min="10" 
+                    max="100" 
+                    value={config.subjectZoom} 
+                    onChange={(e) => setConfig({...config, subjectZoom: +e.target.value})} 
+                    className="w-full accent-indigo-500 h-1 bg-gray-800 rounded-lg appearance-none cursor-pointer" 
+                  />
+                </div>
+              </div>
             </div>
 
             <label className="flex items-center gap-4 bg-gray-800/20 p-4 rounded-2xl border border-gray-800/50 hover:bg-gray-800/40 cursor-pointer transition-all group">
@@ -305,7 +351,7 @@ const App: React.FC = () => {
               </div>
               <div className="flex-1">
                 <p className="text-xs font-black uppercase text-white tracking-wider italic">Logo Overlay</p>
-                <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest">Bottom Center</p>
+                <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest italic underline decoration-indigo-500">Shadowed Center</p>
               </div>
               <input type="file" className="hidden" accept="image/*" onChange={(e) => handleFileChange(e, 'logo')} />
             </label>
@@ -331,10 +377,10 @@ const App: React.FC = () => {
                 </div>
                 <div>
                   <div className="flex justify-between text-[10px] font-black uppercase mb-3 text-gray-500">
-                    <span>Logo Scale</span>
+                    <span>Logo Scale (3x Boost)</span>
                     <span className="text-indigo-400">{config.logoSize}%</span>
                   </div>
-                  <input type="range" min="2" max="20" value={config.logoSize} onChange={(e) => setConfig({...config, logoSize: +e.target.value})} className="w-full accent-indigo-500 h-1 bg-gray-800 rounded-lg appearance-none cursor-pointer" />
+                  <input type="range" min="5" max="65" value={config.logoSize} onChange={(e) => setConfig({...config, logoSize: +e.target.value})} className="w-full accent-indigo-500 h-1 bg-gray-800 rounded-lg appearance-none cursor-pointer" />
                 </div>
              </div>
           </section>
@@ -362,7 +408,7 @@ const App: React.FC = () => {
 
       <footer className="px-10 py-6 bg-[#0b0d11] border-t border-gray-800 text-center">
         <p className="text-[9px] font-bold uppercase tracking-[0.6em] text-gray-700">
-          Studio Merge &bull; Layered Mastering Suite v3.2
+          Studio Merge &bull; Branded Headers v3.5
         </p>
       </footer>
 
