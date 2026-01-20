@@ -1,0 +1,7 @@
+{
+  "name": "Studio Merger",
+  "description": "Professional 16:9 image merger and branding tool. Upload your background and logo to create perfectly formatted website headers with rounded circular branding in seconds.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
